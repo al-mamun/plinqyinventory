@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # OSRM Routing Server - Netherlands
+  osrm-netherlands:
+    image: osrm/osrm-backend:latest
+    container_name: osrm-netherlands
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./osrm-data:/data
+    command: osrm-routed --algorithm mld /data/netherlands-latest.osrm
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    networks:
+      - plinqy-network
+
+  # Search Engine Application
+  search-engine:
+    build:
+      context: ./apps/search-engine
+      dockerfile: Dockerfile.prod
+    container_name: search-engine
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - VITE_OSRM_SERVICE_URL=http://osrm-netherlands:5000/route/v1
+      - VITE_API_BASE_URL=http://ai-service:8000
+    depends_on:
+      - osrm-netherlands
+      - ai-service
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - plinqy-network
+
+  # AI Service (existing)
+  ai-service:
+    build:
+      context: ./docker/ai-service
+      dockerfile: Dockerfile
+    container_name: ai-service
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    networks:
+      - plinqy-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - search-engine
+      - osrm-netherlands
+    restart: unless-stopped
+    networks:
+      - plinqy-network
+
+networks:
+  plinqy-network:
+    driver: bridge
+
+volumes:
+  osrm-data:
+    driver: local

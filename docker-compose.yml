@@ -1,0 +1,80 @@
+version: "3.8"
+
+services:
+  # PostgreSQL with PostGIS
+  postgres:
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    container_name: plinqy-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpass123}
+      POSTGRES_DB: ${POSTGRES_DB:-plinqy_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: plinqy-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: plinqy-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  # AI Transformer Service
+  ai-service:
+    build:
+      context: ./docker/ai-service
+      dockerfile: Dockerfile # Changed from Dockerfile.lightweight
+    container_name: plinqy-ai
+    ports:
+      - "5001:5001"
+    environment:
+      - MODEL_NAME=sentence-transformers/all-MiniLM-L3-v2
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    volumes:
+      - ai_models:/root/.cache/huggingface/transformers
+
+  # RabbitMQ for background jobs
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: plinqy-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-admin123}
+
+  # Admin tools
+  adminer:
+    image: adminer:latest
+    container_name: plinqy-adminer
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
+  es_data:
+  ai_models:

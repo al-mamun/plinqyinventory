@@ -1,0 +1,96 @@
+'use client'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { motion } from 'framer-motion'
+import { ArrowRight, LogIn } from 'lucide-react'
+import Link from 'next/link'
+import { useState } from 'react'
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    // TODO: Implement login logic
+    console.log('Login:', { email, password })
+  }
+
+  return (
+    <div className="min-h-[calc(100vh-200px)] flex items-center justify-center px-6 py-20">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md"
+      >
+        <div className="bg-slate-800/50 backdrop-blur-md border border-slate-700 rounded-2xl p-8 shadow-2xl">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/50">
+              <LogIn className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
+            <p className="text-slate-400">Sign in to your Plinqy account</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+                Email Address
+              </label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+                Password
+              </label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-slate-400 cursor-pointer">
+                <input type="checkbox" className="rounded border-slate-600 bg-slate-900/50" />
+                Remember me
+              </label>
+              <a href="#" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+                Forgot password?
+              </a>
+            </div>
+
+            <Button type="submit" className="w-full" size="lg">
+              Sign In
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-slate-400">
+              Don't have an account?{' '}
+              <Link href="/register" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">
+                Sign up
+              </Link>
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  )
+}

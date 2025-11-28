@@ -1,0 +1,15 @@
+{
+  "name": "plinqy-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/search-engine",
+    "backend",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces"
+  }
+}

@@ -1,0 +1,114 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment variables (ALL .env files)
+.env
+.env.*
+*.env
+
+# Build outputs
+dist/
+build/
+out/
+apps/admin-dashboard/dist/
+apps/search-engine/dist/
+apps/marketing-web/.next/
+apps/marketing-web/out/
+backend/dist/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+pgdata/
+postgres-data/
+
+# AI Services and ML Models (EXCLUDE COMPLETELY)
+docker/ai/
+ai-service/
+**/ai/**
+*.model
+*.weights
+*.h5
+*.pt
+*.pth
+*.onnx
+*.pkl
+embeddings/
+vector-db/
+ml-models/
+
+# OSRM and map data (large files)
+osrm-data/
+*.osm.pbf
+*.osrm
+*.osrm.*
+
+# Docker volumes and data
+docker-compose.override.yml
+.docker/
+postgres-data/
+
+# SSL certificates and secrets
+nginx/ssl/
+*.pem
+*.key
+*.crt
+*.cert
+secrets/
+
+# AWS credentials
+.aws/
+aws-credentials.json
+
+# Terraform state
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+*.coverage
+.nyc_output/
+.pytest_cache/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Prisma
+backend/prisma/migrations/*_migration/
+
+# Next.js
+.next/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini

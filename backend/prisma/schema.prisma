@@ -1,0 +1,785 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "node-api"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model ai_task {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_type          String?
+  entity_type        String?
+  entity_id          String?   @db.Uuid
+  status             String?   @default("pending")
+  priority           Int?      @default(5)
+  retry_count        Int?      @default(0)
+  input_data         Json?
+  output_data        Json?
+  error_message      String?
+  processing_time_ms Int?
+  scheduled_for      DateTime? @db.Timestamp(6)
+  started_at         DateTime? @db.Timestamp(6)
+  completed_at       DateTime? @db.Timestamp(6)
+  created_at         DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([entity_type, entity_id], map: "idx_ai_task_entity")
+}
+
+model analytics_daily_summary {
+  id                          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date                        DateTime  @unique @db.Date
+  total_visitors              Int?
+  unique_visitors             Int?
+  returning_visitors          Int?
+  new_visitors                Int?
+  total_sessions              Int?
+  avg_session_duration        Int?
+  bounce_rate                 Float?
+  pages_per_session           Float?
+  total_searches              Int?
+  unique_queries              Int?
+  searches_per_visitor        Float?
+  zero_result_searches        Int?
+  products_viewed             Int?
+  unique_products_viewed      Int?
+  avg_search_response_time_ms Int?
+  cache_hit_rate              Float?
+  ai_usage_rate               Float?
+  countries_count             Int?
+  cities_count                Int?
+  top_locations               Json?
+  device_breakdown            Json?
+  browser_breakdown           Json?
+  os_breakdown                Json?
+  created_at                  DateTime? @default(now()) @db.Timestamp(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model app_user {
+  id                                         String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                                      String             @unique @db.Citext
+  password_hash                              String
+  full_name                                  String?
+  phone                                      String?
+  avatar_url                                 String?
+  role                                       String             @default("customer")
+  email_verified                             Boolean?           @default(false)
+  is_active                                  Boolean?           @default(true)
+  last_login_at                              DateTime?          @db.Timestamp(6)
+  metadata                                   Json?              @default("{}")
+  created_at                                 DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at                                 DateTime?          @default(now()) @db.Timestamp(6)
+  import_batch                               import_batch[]
+  inventory_event                            inventory_event[]
+  notification                               notification[]
+  product_view                               product_view[]
+  refresh_token                              refresh_token[]
+  search_analytics                           search_analytics[]
+  store                                      store[]
+  store_staff_store_staff_added_byToapp_user store_staff[]      @relation("store_staff_added_byToapp_user")
+  store_staff_store_staff_user_idToapp_user  store_staff[]      @relation("store_staff_user_idToapp_user")
+  system_log                                 system_log[]
+  system_settings                            system_settings[]
+  visitor_session                            visitor_session[]
+
+  @@index([email], map: "idx_app_user_email")
+  @@index([role], map: "idx_app_user_role")
+}
+
+model category {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String
+  slug               String               @unique @db.Citext
+  parent_id          String?              @db.Uuid
+  description        String?
+  icon_url           String?
+  display_order      Int?                 @default(0)
+  is_active          Boolean?             @default(true)
+  product_count      Int?                 @default(0)
+  path               String?
+  level              Int?                 @default(0)
+  created_at         DateTime?            @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamp(6)
+  category           category?            @relation("categoryTocategory", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_category     category[]           @relation("categoryTocategory")
+  category_analytics category_analytics[]
+  store_product      store_product[]
+
+  @@index([parent_id], map: "idx_category_parent")
+  @@index([slug], map: "idx_category_slug")
+}
+
+model category_analytics {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date                DateTime  @db.Date
+  category_id         String?   @db.Uuid
+  search_count        Int?      @default(0)
+  view_count          Int?      @default(0)
+  click_count         Int?      @default(0)
+  unique_visitors     Int?      @default(0)
+  top_cities          Json?
+  top_countries       Json?
+  hourly_distribution Json?
+  created_at          DateTime? @default(now()) @db.Timestamp(6)
+  category            category? @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([date, category_id])
+  @@index([category_id], map: "idx_category_analytics_category")
+  @@index([date], map: "idx_category_analytics_date")
+}
+
+model feature_flag {
+  key                String    @id
+  enabled            Boolean?  @default(false)
+  rollout_percentage Int?      @default(0)
+  target_users       String[]  @db.Uuid
+  target_roles       String[]
+  metadata           Json?
+  description        String?
+  updated_at         DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model geographic_analytics {
+  id                String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date              DateTime                  @db.Date
+  geohash           String
+  location          Unsupported("geography")?
+  city              String?
+  region            String?
+  country           String?
+  total_searches    Int?                      @default(0)
+  unique_visitors   Int?                      @default(0)
+  avg_search_radius Float?
+  top_categories    Json?
+  top_products      Json?
+  top_keywords      Json?
+  created_at        DateTime?                 @default(now()) @db.Timestamp(6)
+
+  @@unique([date, geohash])
+  @@index([date], map: "idx_geographic_analytics_date")
+  @@index([location], map: "idx_geographic_analytics_location", type: Gist)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model import_batch {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id             String?                @db.Uuid
+  import_type          String?
+  source_system        String?
+  file_url             String?
+  status               String?                @default("pending")
+  total_records        Int?
+  processed_records    Int?                   @default(0)
+  success_count        Int?                   @default(0)
+  error_count          Int?                   @default(0)
+  error_details        Json?
+  started_at           DateTime?              @db.Timestamp(6)
+  completed_at         DateTime?              @db.Timestamp(6)
+  created_by           String?                @db.Uuid
+  created_at           DateTime?              @default(now()) @db.Timestamp(6)
+  app_user             app_user?              @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  store                store?                 @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  imported_product_raw imported_product_raw[]
+
+  @@index([status], map: "idx_import_batch_status")
+  @@index([store_id], map: "idx_import_batch_store")
+}
+
+model imported_product_raw {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  import_batch_id String?       @db.Uuid
+  external_id     String?
+  raw_data        Json
+  processed       Boolean?      @default(false)
+  error_message   String?
+  created_at      DateTime?     @default(now()) @db.Timestamp(6)
+  import_batch    import_batch? @relation(fields: [import_batch_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([import_batch_id], map: "idx_imported_product_batch")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model inventory_event {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_product_id String?        @db.Uuid
+  event_type       String?
+  quantity_before  Int?
+  quantity_change  Int?
+  quantity_after   Int?
+  source           String?
+  source_reference String?
+  reason           String?
+  notes            String?
+  performed_by     String?        @db.Uuid
+  created_at       DateTime?      @default(now()) @db.Timestamp(6)
+  app_user         app_user?      @relation(fields: [performed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  store_product    store_product? @relation(fields: [store_product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_inventory_event_date")
+  @@index([store_product_id], map: "idx_inventory_event_product")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model notification {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String?   @db.Uuid
+  type        String?
+  category    String?
+  title       String
+  message     String?
+  action_url  String?
+  icon        String?
+  is_read     Boolean?  @default(false)
+  is_archived Boolean?  @default(false)
+  read_at     DateTime? @db.Timestamp(6)
+  data        Json?
+  expires_at  DateTime? @db.Timestamp(6)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  app_user    app_user? @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_notification_user")
+}
+
+model pos_integration {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id         String?      @db.Uuid
+  provider         String
+  api_endpoint     String?
+  api_credentials  Json?
+  webhook_secret   String?
+  sync_enabled     Boolean?     @default(true)
+  sync_frequency   Int?         @default(300)
+  sync_inventory   Boolean?     @default(true)
+  sync_products    Boolean?     @default(true)
+  sync_categories  Boolean?     @default(true)
+  field_mapping    Json?
+  category_mapping Json?
+  last_sync_at     DateTime?    @db.Timestamp(6)
+  last_error       String?
+  total_syncs      Int?         @default(0)
+  created_at       DateTime?    @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?    @default(now()) @db.Timestamp(6)
+  store            store?       @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sync_event       sync_event[]
+
+  @@index([store_id], map: "idx_pos_integration_store")
+}
+
+model product_image {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_product_id String?        @db.Uuid
+  url              String
+  thumbnail_url    String?
+  alt_text         String?
+  position         Int?           @default(0)
+  is_primary       Boolean?       @default(false)
+  width            Int?
+  height           Int?
+  file_size        Int?
+  created_at       DateTime?      @default(now()) @db.Timestamp(6)
+  store_product    store_product? @relation(fields: [store_product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([store_product_id], map: "idx_product_image_product")
+}
+
+model product_master {
+  id                      String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  global_sku              String?                @unique
+  barcode                 String?
+  title                   String
+  description             String?
+  manufacturer            String?
+  brand                   String?
+  model                   String?
+  ai_summary              String?
+  ai_tags                 String[]
+  ai_vector               Unsupported("vector")?
+  ai_category_suggestions String[]
+  verified                Boolean?               @default(false)
+  created_at              DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at              DateTime?              @default(now()) @db.Timestamp(6)
+  store_product           store_product[]
+
+  @@index([barcode], map: "idx_product_master_barcode")
+  @@index([global_sku], map: "idx_product_master_sku")
+}
+
+model product_variant {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_product_id String?        @db.Uuid
+  variant_name     String
+  variant_type     String?
+  sku              String?
+  barcode          String?
+  price_cents      Int?
+  quantity         Int?           @default(0)
+  attributes       Json?          @default("{}")
+  display_order    Int?           @default(0)
+  is_active        Boolean?       @default(true)
+  created_at       DateTime?      @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?      @default(now()) @db.Timestamp(6)
+  store_product    store_product? @relation(fields: [store_product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([store_product_id], map: "idx_product_variant_product")
+  @@index([sku], map: "idx_product_variant_sku")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model product_view {
+  id                    String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  session_id            String?                   @db.Uuid
+  search_id             String?                   @db.Uuid
+  visitor_id            String
+  user_id               String?                   @db.Uuid
+  store_product_id      String?                   @db.Uuid
+  store_id              String?                   @db.Uuid
+  view_source           String?
+  position_in_results   Int?
+  view_duration_seconds Int?
+  interaction_type      String[]
+  clicked_store_info    Boolean?                  @default(false)
+  clicked_directions    Boolean?                  @default(false)
+  clicked_contact       Boolean?                  @default(false)
+  viewer_location       Unsupported("geography")?
+  distance_to_store_km  Float?
+  created_at            DateTime?                 @default(now()) @db.Timestamp(6)
+  search_analytics      search_analytics?         @relation(fields: [search_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  visitor_session       visitor_session?          @relation(fields: [session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  store                 store?                    @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  store_product         store_product?            @relation(fields: [store_product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  app_user              app_user?                 @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_product_view_date")
+  @@index([store_product_id], map: "idx_product_view_product")
+  @@index([session_id], map: "idx_product_view_session")
+  @@index([store_id], map: "idx_product_view_store")
+}
+
+model query_cache {
+  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  query_hash       String                 @unique
+  query_text       String
+  query_normalized String?
+  embedding        Unsupported("vector")?
+  results          Json?
+  result_count     Int?
+  cache_hit_count  Int?                   @default(0)
+  expires_at       DateTime?              @db.Timestamp(6)
+  created_at       DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?              @default(now()) @db.Timestamp(6)
+
+  @@index([expires_at], map: "idx_query_cache_expires")
+  @@index([query_hash], map: "idx_query_cache_hash")
+}
+
+model rate_limit {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identifier    String
+  endpoint      String
+  window_start  DateTime  @db.Timestamp(6)
+  request_count Int?      @default(1)
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([identifier, endpoint, window_start])
+  @@index([identifier, window_start], map: "idx_rate_limit_identifier")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model search_analytics {
+  id                            String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  session_id                    String?                   @db.Uuid
+  visitor_id                    String
+  user_id                       String?                   @db.Uuid
+  query_text                    String
+  query_normalized              String?
+  query_vector                  Unsupported("vector")?
+  query_language                String?
+  search_type                   String?
+  search_location               Unsupported("geography")?
+  search_radius_km              Int?
+  user_city                     String?
+  user_country                  String?
+  filters                       Json?
+  sort_by                       String?
+  results_count                 Int?                      @default(0)
+  results_returned              Int?                      @default(0)
+  results_clicked               Int?                      @default(0)
+  first_result_clicked_position Int?
+  response_time_ms              Int?
+  used_cache                    Boolean?                  @default(false)
+  used_ai                       Boolean?                  @default(true)
+  device_type                   String?
+  search_page                   String?
+  is_refined_search             Boolean?                  @default(false)
+  previous_search_id            String?                   @db.Uuid
+  created_at                    DateTime?                 @default(now()) @db.Timestamp(6)
+  product_view                  product_view[]
+  search_analytics              search_analytics?         @relation("search_analyticsTosearch_analytics", fields: [previous_search_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_search_analytics        search_analytics[]        @relation("search_analyticsTosearch_analytics")
+  visitor_session               visitor_session?          @relation(fields: [session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  app_user                      app_user?                 @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_search_analytics_date")
+  @@index([search_location], map: "idx_search_analytics_location", type: Gist)
+  @@index([visitor_id], map: "idx_search_analytics_visitor")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model search_keywords {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  keyword            String    @unique @db.Citext
+  keyword_type       String?
+  search_count       Int?      @default(0)
+  unique_searchers   Int?      @default(0)
+  avg_results_count  Float?
+  click_through_rate Float?
+  conversion_rate    Float?
+  related_keywords   String[]
+  related_categories String[]  @db.Uuid
+  related_products   String[]  @db.Uuid
+  sentiment          String?
+  intent             String?
+  last_searched      DateTime? @db.Timestamp(6)
+  trending_score     Float?    @default(0)
+  created_at         DateTime? @default(now()) @db.Timestamp(6)
+  updated_at         DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([keyword], map: "idx_search_keywords_keyword")
+  @@index([trending_score(sort: Desc)], map: "idx_search_keywords_trending")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model search_suggestions {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  suggestion      String    @unique
+  display_text    String?
+  suggestion_type String?
+  score           Float?    @default(0)
+  click_count     Int?      @default(0)
+  is_active       Boolean?  @default(true)
+  metadata        Json?
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model search_trends {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  period_type         String?
+  period_start        DateTime  @db.Timestamp(6)
+  period_end          DateTime  @db.Timestamp(6)
+  trending_keywords   Json?
+  rising_keywords     Json?
+  declining_keywords  Json?
+  new_keywords        Json?
+  trending_categories Json?
+  trending_products   Json?
+  trending_locations  Json?
+  created_at          DateTime? @default(now()) @db.Timestamp(6)
+
+  @@unique([period_type, period_start])
+  @@index([period_type, period_start], map: "idx_search_trends_period")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model store {
+  id                      String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  owner_id                String?                    @db.Uuid
+  name                    String
+  slug                    String                     @unique @db.Citext
+  description             String?
+  logo_url                String?
+  cover_image_url         String?
+  address                 String?
+  city                    String?
+  state_province          String?
+  country                 String?
+  postal_code             String?
+  latitude                Float?
+  longitude               Float?
+  location                Unsupported("geography")?
+  contact_info            Json?                      @default("{}")
+  phone                   String?
+  email                   String?                    @db.Citext
+  website                 String?
+  business_hours          Json?
+  delivery_zones          Unsupported("geography")[]
+  delivery_available      Boolean?                   @default(false)
+  pickup_available        Boolean?                   @default(true)
+  status                  String?                    @default("pending")
+  subscription_tier       String?                    @default("free")
+  subscription_expires_at DateTime?                  @db.Timestamp(6)
+  max_products            Int?                       @default(100)
+  max_images_per_product  Int?                       @default(5)
+  currency                String?                    @default("USD") @db.Char(3)
+  timezone                String?                    @default("UTC")
+  settings                Json?                      @default("{}")
+  total_products          Int?                       @default(0)
+  total_views             Int?                       @default(0)
+  rating                  Decimal?                   @db.Decimal(3, 2)
+  review_count            Int?                       @default(0)
+  is_active               Boolean?                   @default(true)
+  featured                Boolean?                   @default(false)
+  verified_at             DateTime?                  @db.Timestamp(6)
+  created_at              DateTime?                  @default(now()) @db.Timestamp(6)
+  updated_at              DateTime?                  @default(now()) @db.Timestamp(6)
+  import_batch            import_batch[]
+  pos_integration         pos_integration[]
+  product_view            product_view[]
+  app_user                app_user?                  @relation(fields: [owner_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  store_analytics         store_analytics[]
+  store_product           store_product[]
+  store_staff             store_staff[]
+  webhook_endpoint        webhook_endpoint[]
+
+  @@index([location], map: "idx_store_location", type: Gist)
+  @@index([owner_id], map: "idx_store_owner")
+  @@index([slug], map: "idx_store_slug")
+}
+
+model store_analytics {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id           String?   @db.Uuid
+  date               DateTime  @db.Date
+  search_appearances Int?      @default(0)
+  listing_views      Int?      @default(0)
+  profile_views      Int?      @default(0)
+  product_views      Int?      @default(0)
+  direction_clicks   Int?      @default(0)
+  contact_clicks     Int?      @default(0)
+  website_clicks     Int?      @default(0)
+  avg_position       Float?
+  click_through_rate Float?
+  unique_visitors    Int?      @default(0)
+  returning_visitors Int?      @default(0)
+  created_at         DateTime? @default(now()) @db.Timestamp(6)
+  store              store?    @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([store_id, date])
+  @@index([date], map: "idx_store_analytics_date")
+  @@index([store_id], map: "idx_store_analytics_store")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model store_product {
+  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id               String?                @db.Uuid
+  product_master_id      String?                @db.Uuid
+  category_id            String?                @db.Uuid
+  name                   String
+  description            String?
+  short_description      String?
+  sku                    String?
+  barcode                String?
+  price_cents            Int
+  compare_at_price_cents Int?
+  cost_cents             Int?
+  currency               String?                @default("USD") @db.Char(3)
+  tax_rate               Decimal?               @db.Decimal(5, 2)
+  quantity               Int?                   @default(0)
+  track_inventory        Boolean?               @default(true)
+  low_stock_threshold    Int?                   @default(10)
+  availability_status    String?                @default("in_stock")
+  weight_grams           Int?
+  dimensions             Json?
+  brand                  String?
+  tags                   String[]
+  attributes             Json?                  @default("{}")
+  embedding              Unsupported("vector")?
+  search_text            String?
+  ai_enhanced_data       Json?
+  external_id            String?
+  sync_source            String?
+  last_synced_at         DateTime?              @db.Timestamp(6)
+  is_featured            Boolean?               @default(false)
+  is_visible             Boolean?               @default(true)
+  display_order          Int?                   @default(0)
+  view_count             Int?                   @default(0)
+  search_appearances     Int?                   @default(0)
+  click_count            Int?                   @default(0)
+  created_at             DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?              @default(now()) @db.Timestamp(6)
+  inventory_event        inventory_event[]
+  product_image          product_image[]
+  product_variant        product_variant[]
+  product_view           product_view[]
+  category               category?              @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product_master         product_master?        @relation(fields: [product_master_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  store                  store?                 @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([barcode], map: "idx_store_product_barcode")
+  @@index([category_id], map: "idx_store_product_category")
+  @@index([embedding], map: "idx_store_product_embedding")
+  @@index([store_id, sku], map: "idx_store_product_sku")
+  @@index([store_id], map: "idx_store_product_store")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model store_staff {
+  id                                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id                                String?   @db.Uuid
+  user_id                                 String?   @db.Uuid
+  role                                    String?   @default("assistant")
+  permissions                             Json?     @default("{}")
+  added_by                                String?   @db.Uuid
+  created_at                              DateTime? @default(now()) @db.Timestamp(6)
+  updated_at                              DateTime? @default(now()) @db.Timestamp(6)
+  app_user_store_staff_added_byToapp_user app_user? @relation("store_staff_added_byToapp_user", fields: [added_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  store                                   store?    @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  app_user_store_staff_user_idToapp_user  app_user? @relation("store_staff_user_idToapp_user", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([store_id, user_id])
+  @@index([store_id], map: "idx_store_staff_store")
+  @@index([user_id], map: "idx_store_staff_user")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sync_event {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  integration_id  String?          @db.Uuid
+  sync_type       String?
+  status          String?
+  items_processed Int?             @default(0)
+  items_created   Int?             @default(0)
+  items_updated   Int?             @default(0)
+  items_deleted   Int?             @default(0)
+  error_details   Json?
+  duration_ms     Int?
+  started_at      DateTime?        @default(now()) @db.Timestamp(6)
+  completed_at    DateTime?        @db.Timestamp(6)
+  pos_integration pos_integration? @relation(fields: [integration_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([started_at], map: "idx_sync_event_date")
+  @@index([integration_id], map: "idx_sync_event_integration")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model system_log {
+  id         BigInt    @id @default(autoincrement())
+  level      String?
+  category   String?
+  message    String?
+  context    Json?
+  user_id    String?   @db.Uuid
+  ip_address String?   @db.Inet
+  user_agent String?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  app_user   app_user? @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_system_log_date")
+  @@index([level], map: "idx_system_log_level")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model system_settings {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String    @unique
+  value       String?
+  value_type  String?
+  category    String?
+  description String?
+  is_public   Boolean?  @default(false)
+  updated_by  String?   @db.Uuid
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  app_user    app_user? @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([key], map: "idx_system_settings_key")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model visitor_session {
+  id               String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  visitor_id       String
+  user_id          String?                   @db.Uuid
+  ip_address       String?                   @db.Inet
+  user_agent       String?
+  device_type      String?
+  device_model     String?
+  browser          String?
+  browser_version  String?
+  os               String?
+  os_version       String?
+  country          String?
+  country_code     String?                   @db.Char(2)
+  region           String?
+  city             String?
+  postal_code      String?
+  timezone         String?
+  location         Unsupported("geography")?
+  referrer_url     String?
+  referrer_domain  String?
+  utm_source       String?
+  utm_medium       String?
+  utm_campaign     String?
+  utm_term         String?
+  utm_content      String?
+  landing_page     String?
+  session_start    DateTime?                 @default(now()) @db.Timestamp(6)
+  session_end      DateTime?                 @db.Timestamp(6)
+  duration_seconds Int?
+  page_views       Int?                      @default(0)
+  searches_made    Int?                      @default(0)
+  products_viewed  Int?                      @default(0)
+  bounce           Boolean?                  @default(false)
+  created_at       DateTime?                 @default(now()) @db.Timestamp(6)
+  product_view     product_view[]
+  search_analytics search_analytics[]
+  app_user         app_user?                 @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_visitor_session_date")
+  @@index([location], map: "idx_visitor_session_location", type: Gist)
+  @@index([user_id], map: "idx_visitor_session_user")
+  @@index([visitor_id], map: "idx_visitor_session_visitor")
+}
+
+model webhook_endpoint {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id          String?   @db.Uuid
+  url               String
+  events            String[]
+  secret            String?
+  is_active         Boolean?  @default(true)
+  total_deliveries  Int?      @default(0)
+  failed_deliveries Int?      @default(0)
+  last_delivery_at  DateTime? @db.Timestamp(6)
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  updated_at        DateTime? @default(now()) @db.Timestamp(6)
+  store             store?    @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([store_id], map: "idx_webhook_endpoint_store")
+}
+
+model refresh_token {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String?   @db.Uuid
+  token       String    @unique
+  expires_at  DateTime  @db.Timestamp(6)
+  is_revoked  Boolean?  @default(false)
+  device_info Json?
+  ip_address  String?   @db.Inet
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  app_user    app_user? @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id], map: "idx_refresh_token_user")
+  @@index([token], map: "idx_refresh_token_token")
+  @@index([expires_at], map: "idx_refresh_token_expires")
+}
