@@ -1,3 +1,15 @@
+# Claude AI assistant files
+.claude/
+
+# Project documentation (local only)
+BACKEND_UPDATE_SUMMARY.md
+CONTRIBUTING.md
+DATABASE_SCHEMA.md
+DEPLOYMENT.md
+QUICK_START.md
+SETUP_GUIDE.md
+TECH_STACK.md
+
 # Dependencies
 node_modules/
 __pycache__/
